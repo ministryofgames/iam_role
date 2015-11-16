@@ -3,7 +3,7 @@ defmodule IamRole.Mixfile do
 
   def project do
     [app: :iam_role,
-     version: "1.0.0",
+     version: "1.1.0",
      description: "Application for automatically fetching AWS IAM " <>
        "role security credentials.",
      elixir: "~> 1.1",

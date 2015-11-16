@@ -1,3 +1,4 @@
 use Mix.Config
 
-config :iam_role, disabled: true
+config :iam_role,
+  model: :env

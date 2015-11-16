@@ -21,6 +21,9 @@ use Mix.Config
 #     config :logger, level: :info
 #
 
+config :iam_role,
+  mode: :dynamic		# credentials source mode: :env (environment variables) / :manual (access/secret key specified manually) / :dynamic (credentials fetched from instance info)
+
 # It is also possible to import configuration files, relative to this
 # directory. For example, you can emulate configuration per environment
 # by uncommenting the line below and defining dev.exs, test.exs and such.

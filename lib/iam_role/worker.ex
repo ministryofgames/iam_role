@@ -16,29 +16,40 @@ defmodule IamRole.Worker do
   end
   
   def init([_args]) do
-    # if updates are disabled read key and secret from system env
-    disabled = Application.get_env(:iam_role, :disabled, false)
-    if disabled do
-      access_key_id     = System.get_env("AWS_ACCESS_KEY_ID") || ""
-      secret_access_key = System.get_env("AWS_SECRET_ACCESS_KEY") || ""
-      credentials       = %Credentials{access_key_id: access_key_id,
-                                       secret_access_key: secret_access_key}
+    # handle different types of credentials source
+    mode = Application.get_env(:iam_role, :mode, :env)
+    case mode do
+      :manual ->
+        # fetch credentials from app env
+        {access_key_id, secret_access_key} = Application.get_env(:iam_role, :credentials)
+        credentials = %Credentials{access_key_id: access_key_id,
+                                   secret_access_key: secret_access_key}
+        {:ok, %{@initial_state | role_info: %Info{}, credentials: credentials}}
 
-      # store credentials to app env
-      :ok = Application.put_env(:iam_role,
-                                :credentials,
-                                {credentials.access_key_id,
-                                 credentials.secret_access_key})
-      
-      {:ok, %{@initial_state | role_info: %Info{}, credentials: credentials}}
-    else
-      case update_info(@initial_state) do
-        :error ->
-          # stop here, supervisor will let us retry
-          {:stop, :could_not_update_role_info}
-        state ->
-          {:ok, state, 0}
-      end
+      :env ->
+        # fetch credentials from environment variables
+        access_key_id     = System.get_env("AWS_ACCESS_KEY_ID") || ""
+        secret_access_key = System.get_env("AWS_SECRET_ACCESS_KEY") || ""
+        credentials       = %Credentials{access_key_id: access_key_id,
+                                         secret_access_key: secret_access_key}
+
+        # store credentials to app env
+        :ok = Application.put_env(:iam_role,
+                                  :credentials,
+                                  {credentials.access_key_id,
+                                   credentials.secret_access_key})
+
+        {:ok, %{@initial_state | role_info: %Info{}, credentials: credentials}}
+
+      :dynamic ->
+        case update_info(@initial_state) do
+          :error ->
+            # stop here, supervisor will let us retry
+            {:stop, :could_not_update_role_info}
+          state ->
+            # start refresh loop
+            {:ok, state, 0}
+        end
     end
   end
   
